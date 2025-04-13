@@ -36,17 +36,20 @@ void lab4() {
 }
 
 void lab5() {
-    bmp::BmpHandler handler(expand_home_directory("~/me/labs/ikg/lab4/input_data/sample0_RGB.bmp"));
+    bmp::BmpHandler first_handler(expand_home_directory("~/me/labs/ikg/lab4/input_data/sample0_RGB.bmp"));
 
     Palette palette;
     palette.make_grayscale();
 
-    handler.rgb_to_indexed_image_8bit(palette);
-    handler.write(expand_home_directory("~/me/labs/ikg/lab4/output_data/lab5_file.bmp"));
+    first_handler.to_8bit(palette);
+
+    first_handler.write(expand_home_directory("~/me/labs/ikg/lab4/output_data/lab5_file.bmp"));
+    //const auto source = expand_home_directory("~/me/labs/ikg/lab4/output_data/lab5_file.bmp");
+    const auto source = expand_home_directory("~/me/labs/ikg/lab4/input_data/sample0_RGB.bmp");
 
     std::vector<std::function<void()>> actions;
-    actions.emplace_back([] {
-        bmp::BmpHandler handler(expand_home_directory("~/me/labs/ikg/lab4/output_data/lab5_file.bmp"));
+    actions.emplace_back([source] {
+        const bmp::BmpHandler handler(source);
         const auto map = handler.get_color_histogram();
         MapToCsvFileHandler::to_csv(
         expand_home_directory("~/me/labs/ikg/lab4/output_data/lab5_histogram.csv"),
@@ -55,34 +58,40 @@ void lab5() {
         );
     });
 
-    actions.emplace_back([] {
-        bmp::BmpHandler handler(expand_home_directory("~/me/labs/ikg/lab4/output_data/lab5_file.bmp"));
+    actions.emplace_back([source] {
+        const bmp::BmpHandler handler(source);
         handler.change_brightness(-25);
         handler.write(expand_home_directory("~/me/labs/ikg/lab4/output_data/lab5_file_bright.bmp"));
     });
 
-    actions.emplace_back([] {
-        bmp::BmpHandler handler(expand_home_directory("~/me/labs/ikg/lab4/output_data/lab5_file.bmp"));
-        handler.negative_transform();
+    actions.emplace_back([source] {
+        const bmp::BmpHandler handler(source);
+        handler.negative_transform(32);
         handler.write(expand_home_directory("~/me/labs/ikg/lab4/output_data/lab5_file_negative.bmp"));
     });
 
-    actions.emplace_back([] {
-        bmp::BmpHandler handler(expand_home_directory("~/me/labs/ikg/lab4/output_data/lab5_file.bmp"));
-        handler.indexed_8bit_to_monochrome(200);
-        handler.write(expand_home_directory("~/me/labs/ikg/lab4/output_data/lab5_file_monochrome.bmp"));
-    });
-
-    actions.emplace_back([] {
-        bmp::BmpHandler handler(expand_home_directory("~/me/labs/ikg/lab4/output_data/lab5_file.bmp"));
-        handler.increase_contrast(13, 89);
+    actions.emplace_back([source] {
+        const bmp::BmpHandler handler(source);
+        handler.increase_contrast(0, 20);
         handler.write(expand_home_directory("~/me/labs/ikg/lab4/output_data/lab5_file_inc_contr.bmp"));
     });
 
-    actions.emplace_back([] {
-        bmp::BmpHandler handler(expand_home_directory("~/me/labs/ikg/lab4/output_data/lab5_file.bmp"));
-        handler.decrease_contrast(13, 89);
+    actions.emplace_back([source] {
+        const bmp::BmpHandler handler(source);
+        handler.decrease_contrast(32, 128);
         handler.write(expand_home_directory("~/me/labs/ikg/lab4/output_data/lab5_file_dec_contr.bmp"));
+    });
+
+    actions.emplace_back([source] {
+        bmp::BmpHandler handler(source);
+        handler.to_monochrome(160);
+        handler.write(expand_home_directory("~/me/labs/ikg/lab4/output_data/lab5_file_monochrome.bmp"));
+    });
+
+    actions.emplace_back([source] {
+        const bmp::BmpHandler handler(source);
+        handler.gamma_correct(6);
+        handler.write(expand_home_directory("~/me/labs/ikg/lab4/output_data/lab5_file_gamma.bmp"));
     });
 
     for (const auto& action : actions) {

@@ -130,7 +130,7 @@ namespace bmp {
             delete[] bytes;
         }
 
-        void rgb_to_indexed_image_8bit(Palette palette) {
+        void to_8bit(Palette palette) {
             if (const auto rgb_image{dynamic_cast<RgbBmpImage*>(bmp_image)}; !rgb_image) {
                 throw std::runtime_error("Could not create RGB image");
             }
@@ -150,85 +150,21 @@ namespace bmp {
             bmp_converter = nullptr;
         }
 
-        std::unordered_map<uint8_t, int> get_color_histogram() const {
+        void to_monochrome(const int p = 127) {
             const auto indexed_image{dynamic_cast<IndexedBmpImage*>(bmp_image)};
 
             if (!indexed_image) {
-                throw std::runtime_error("Could not create indexed image");
-            }
-
-            std::unordered_map<uint8_t, int> histogram;
-
-            for (auto pixel : data) {
-                histogram[pixel]++;
-            }
-
-            return histogram;
-        }
-
-        void change_brightness(const int brightness) {
-            const auto indexed_image{dynamic_cast<IndexedBmpImage*>(bmp_image)};
-
-            if (!indexed_image) {
-                throw std::runtime_error("Could not create indexed image");
-            }
-
-            std::vector<uint8_t> new_data;
-            for (const auto pixel : data) {
-                if (pixel + brightness > 255 || pixel + brightness < 0) {
-                    new_data.push_back(pixel);
-                    continue;
-                }
-
-                new_data.push_back(pixel + brightness);
-            }
-
-            data.swap(new_data);
-        }
-
-        void negative_transform() {
-            const auto indexed_image{dynamic_cast<IndexedBmpImage*>(bmp_image)};
-
-            if (!indexed_image) {
-                throw std::runtime_error("Could not create indexed image");
-            }
-
-            std::vector<uint8_t> new_data;
-            for (const auto pixel : data) {
-                new_data.push_back(255 - pixel);
-            }
-
-            data.swap(new_data);
-        }
-
-        void negative_transform(const int p) {
-            const auto indexed_image{dynamic_cast<IndexedBmpImage*>(bmp_image)};
-            if (!indexed_image) {
-                throw std::runtime_error("Could not create indexed image");
-            }
-
-            std::vector<uint8_t> new_data;
-            for (const auto pixel : data) {
-                if (pixel < p) {
-                    new_data.push_back(pixel);
-                    continue;
-                }
-
-                new_data.push_back(255 - pixel);
-            }
-            data.swap(new_data);
-        }
-
-        void indexed_8bit_to_monochrome(const int p = 127) {
-            const auto indexed_image{dynamic_cast<IndexedBmpImage*>(bmp_image)};
-
-            if (!indexed_image || info_header.bit_count != 8) {
-                throw std::runtime_error("Could not create indexed image");
+                Palette palette;
+                palette.make_grayscale();
+                to_8bit(palette);
             }
 
             bmp_converter = new BmpConverterIndexed8BitToMonochrome(
                 bmp_image,
+                file_header,
+                info_header,
                 data,
+                this->palette,
                 p
             );
 
@@ -238,32 +174,32 @@ namespace bmp {
             bmp_converter = nullptr;
         }
 
-        void increase_contrast(const uint8_t q1, const uint8_t q2) {
-            const auto indexed_image{dynamic_cast<IndexedBmpImage*>(bmp_image)};
-            if (!indexed_image) {
-                throw std::runtime_error("Could not create indexed image");
-            }
-
-            std::vector<uint8_t> new_data;
-            for (const auto pixel : data) {
-                const auto to_add = (pixel - q1) * 255 / (q2 - q1);
-                new_data.push_back(to_add);
-            }
-            data.swap(new_data);
+        std::unordered_map<uint8_t, int> get_color_histogram() const {
+            return bmp_image->get_color_histogram();
         }
 
-        void decrease_contrast(const uint8_t q1, const uint8_t q2) {
-            const auto indexed_image{dynamic_cast<IndexedBmpImage*>(bmp_image)};
-            if (!indexed_image) {
-                throw std::runtime_error("Could not create indexed image");
-            }
+        void change_brightness(const int brightness) const {
+            return bmp_image->change_brightness(brightness);
+        }
 
-            std::vector<uint8_t> new_data;
-            for (const auto pixel : data) {
-                const auto to_add = q1 + pixel * (q2 - q1) / 255;
-                new_data.push_back(to_add);
-            }
-            data.swap(new_data);
+        void negative_transform() const {
+            return bmp_image->transform_to_negative();
+        }
+
+        void negative_transform(const int p) const {
+            return bmp_image->transform_to_negative(p);
+        }
+
+        void increase_contrast(const uint8_t q1, const uint8_t q2) const {
+            return bmp_image->increase_contrast(q1, q2);
+        }
+
+        void decrease_contrast(const uint8_t q1, const uint8_t q2) const {
+            return bmp_image->decrease_contrast(q1, q2);
+        }
+
+        void gamma_correct(const int gamma) const {
+            return bmp_image->gamma_correct(gamma);
         }
     };
 }

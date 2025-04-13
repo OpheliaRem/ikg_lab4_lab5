@@ -49,35 +49,20 @@ struct Color {
 
 struct Palette {
 
-    std::vector<uint8_t> colors;
+    std::vector<Color> colors;
 
     void set_bit_count(const uint16_t bit_count) {
-        colors.resize(pwr2(bit_count));
+        colors.resize(1 << bit_count);
     }
 
     void make_grayscale() {
-        if (!colors.empty()) {
-            colors.clear();
-        }
-
+        colors.clear();
         for (int i = 0; i < 256; ++i) {
-            colors.push_back(i);
-            colors.push_back(i);
-            colors.push_back(i);
-            colors.push_back(0);
+            colors.push_back({ static_cast<byte>(i), static_cast<byte>(i), static_cast<byte>(i), 0 });
         }
-    }
-
-private:
-
-    static long pwr2(const int num) {
-        long result = 1;
-        for (int i = 0; i < num; ++i) {
-            result *= 2;
-        }
-        return result;
     }
 };
+
 
 #pragma pack(pop)
 

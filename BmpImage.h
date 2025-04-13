@@ -4,6 +4,8 @@
 #include "managing_structs.h"
 #include <fstream>
 #include <vector>
+#include <unordered_map>
+#include <cmath>
 
 namespace  bmp {
     class BmpImage {
@@ -27,13 +29,13 @@ namespace  bmp {
         ) :
             file_header(file_header), info_header(info_header), data(file_data) {}
 
-        virtual ~BmpImage() {}
+        virtual ~BmpImage() = default;
 
-        BmpHeader& get_file_header() const { return file_header; }
+        [[nodiscard]] BmpHeader& get_file_header() const { return file_header; }
 
-        BmpInfoHeader& get_info_header() const { return info_header; }
+        [[nodiscard]] BmpInfoHeader& get_info_header() const { return info_header; }
 
-        std::vector<uint8_t>& get_data() const { return data; }
+        [[nodiscard]] std::vector<uint8_t>& get_data() const { return data; }
 
         virtual void read_headers(std::ifstream& file) {
             file.read(reinterpret_cast<char *>(&file_header), sizeof(file_header));
@@ -79,6 +81,18 @@ namespace  bmp {
                 file.write(reinterpret_cast<const char*>(data.data()), row_stride * abs(info_header.height));
             }
         }
+
+        [[nodiscard]] virtual std::unordered_map<uint8_t, int> get_color_histogram() const = 0;
+
+        virtual void change_brightness(int brightness) = 0;
+
+        virtual void transform_to_negative() = 0;
+        virtual void transform_to_negative(int p) = 0;
+
+        virtual void increase_contrast(uint8_t q1, uint8_t q2) = 0;
+        virtual void decrease_contrast(uint8_t q1, uint8_t q2) = 0;
+
+        virtual void gamma_correct(int gamma) = 0;
     };
 
     class RgbBmpImage final : public BmpImage {
@@ -95,6 +109,82 @@ namespace  bmp {
 
         void write_headers(std::ofstream &file) const override {
             BmpImage::write_headers(file);
+        }
+
+        [[nodiscard]] std::unordered_map<uint8_t, int> get_color_histogram() const override {
+            std::unordered_map<uint8_t, int> histogram;
+
+            for (auto byte : data) {
+                histogram[byte]++;
+            }
+
+            return histogram;
+        }
+
+        void change_brightness(const int brightness) override {
+            std::vector<uint8_t> new_data;
+            for (const auto byte : data) {
+                if (byte + brightness > 255 || byte + brightness < 0) {
+                    new_data.push_back(byte);
+                    continue;
+                }
+
+                new_data.push_back(byte + brightness);
+            }
+
+            data.swap(new_data);
+        }
+
+        void transform_to_negative() override {
+            std::vector<uint8_t> new_data;
+            for (const auto byte : data) {
+                const auto to_add = 255 - byte;
+                new_data.push_back(to_add);
+            }
+
+            data.swap(new_data);
+        }
+
+        void transform_to_negative(const int p) override {
+            std::vector<uint8_t> new_data;
+            for (const auto byte : data) {
+                if (byte < p) {
+                    new_data.push_back(byte);
+                    continue;
+                }
+
+                new_data.push_back(255 - byte);
+            }
+            data.swap(new_data);
+        }
+
+        void increase_contrast(const uint8_t q1, const uint8_t q2) override {
+            std::vector<uint8_t> new_data;
+            for (const auto byte : data) {
+                const auto to_add = static_cast<uint8_t>((byte - q1) * 255 / (q2 - q1));
+                new_data.push_back(to_add);
+            }
+            data.swap(new_data);
+        }
+
+        void decrease_contrast(const uint8_t q1, const uint8_t q2) override {
+            std::vector<uint8_t> new_data;
+            for (const auto byte : data) {
+                const auto to_add = static_cast<uint8_t>(q1 + byte * (q2 - q1) / 255);
+                new_data.push_back(to_add);
+            }
+            data.swap(new_data);
+        }
+
+        void gamma_correct(const int gamma) override {
+            std::vector<uint8_t> new_data;
+
+            for (const auto byte : data) {
+                const auto to_add = static_cast<uint8_t>(255 * pow(byte / 255.0, gamma));
+                new_data.push_back(to_add);
+            }
+
+            data.swap(new_data);
         }
     };
 
@@ -142,6 +232,14 @@ namespace  bmp {
             BmpImage::write_headers(file);
             file.write(reinterpret_cast<const char *>(&color_header), sizeof(color_header));
         }
+
+        [[nodiscard]] std::unordered_map<uint8_t, int> get_color_histogram() const override {return {};}
+        void change_brightness(const int brightness) override {}
+        void transform_to_negative() override {}
+        void transform_to_negative(const int p) override {}
+        void increase_contrast(const uint8_t q1, const uint8_t q2) override {}
+        void decrease_contrast(const uint8_t q1, const uint8_t q2) override {}
+        void gamma_correct(const int gamma) override {}
     };
 
     class IndexedBmpImage final : public BmpImage {
@@ -163,9 +261,84 @@ namespace  bmp {
 
         void write_headers(std::ofstream &file) const override {
             BmpImage::write_headers(file);
-            file.write((char*)palette.colors.data(), palette.colors.size() * sizeof(Color));
+            file.write(reinterpret_cast<char *>(palette.colors.data()), palette.colors.size() * sizeof(Color));
         }
 
+        [[nodiscard]] std::unordered_map<uint8_t, int> get_color_histogram() const override {
+            std::unordered_map<uint8_t, int> histogram;
+
+            for (auto byte : data) {
+                histogram[byte]++;
+            }
+
+            return histogram;
+        }
+
+        void change_brightness(const int brightness) override {
+            std::vector<uint8_t> new_data;
+            for (const auto byte : data) {
+                if (byte + brightness > 255 || byte + brightness < 0) {
+                    new_data.push_back(byte);
+                    continue;
+                }
+
+                new_data.push_back(byte + brightness);
+            }
+
+            data.swap(new_data);
+        }
+
+        void transform_to_negative() override {
+            std::vector<uint8_t> new_data;
+            for (const auto byte : data) {
+                const auto to_add = 255 - byte;
+                new_data.push_back(to_add);
+            }
+
+            data.swap(new_data);
+        }
+
+        void transform_to_negative(const int p) override {
+            std::vector<uint8_t> new_data;
+            for (const auto byte : data) {
+                if (byte < p) {
+                    new_data.push_back(byte);
+                    continue;
+                }
+
+                new_data.push_back(255 - byte);
+            }
+            data.swap(new_data);
+        }
+
+        void increase_contrast(const uint8_t q1, const uint8_t q2) override {
+            std::vector<uint8_t> new_data;
+            for (const auto byte : data) {
+                const auto to_add = static_cast<uint8_t>((byte - q1) * 255 / (q2 - q1));
+                new_data.push_back(to_add);
+            }
+            data.swap(new_data);
+        }
+
+        void decrease_contrast(const uint8_t q1, const uint8_t q2) override {
+            std::vector<uint8_t> new_data;
+            for (const auto byte : data) {
+                const auto to_add = static_cast<uint8_t>(q1 + byte * (q2 - q1) / 255);
+                new_data.push_back(to_add);
+            }
+            data.swap(new_data);
+        }
+
+        void gamma_correct(const int gamma) override {
+            std::vector<uint8_t> new_data;
+
+            for (const auto byte : data) {
+                const auto to_add = static_cast<uint8_t>(255 * pow(byte / 255.0, gamma));
+                new_data.push_back(to_add);
+            }
+
+            data.swap(new_data);
+        }
     };
 }
 
