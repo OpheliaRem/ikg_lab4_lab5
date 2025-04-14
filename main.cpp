@@ -4,6 +4,7 @@
 #include <filesystem>
 #include <vector>
 #include <functional>
+#include "BresenhamAlgorithmExecutor.h"
 
 std::string expand_home_directory(const std::string& path) {
     if (path[0] == '~') {
@@ -44,8 +45,8 @@ void lab5() {
     first_handler.to_8bit(palette);
 
     first_handler.write(expand_home_directory("~/me/labs/ikg/lab4/output_data/lab5_file.bmp"));
-    //const auto source = expand_home_directory("~/me/labs/ikg/lab4/output_data/lab5_file.bmp");
-    const auto source = expand_home_directory("~/me/labs/ikg/lab4/input_data/sample0_RGB.bmp");
+    const auto source = expand_home_directory("~/me/labs/ikg/lab4/output_data/lab5_file.bmp");
+    //const auto source = expand_home_directory("~/me/labs/ikg/lab4/input_data/sample0_RGB.bmp");
 
     std::vector<std::function<void()>> actions;
     actions.emplace_back([source] {
@@ -54,7 +55,7 @@ void lab5() {
         MapToCsvFileHandler::to_csv(
         expand_home_directory("~/me/labs/ikg/lab4/output_data/lab5_histogram.csv"),
             map,
-            ','
+            ';'
         );
     });
 
@@ -72,7 +73,7 @@ void lab5() {
 
     actions.emplace_back([source] {
         const bmp::BmpHandler handler(source);
-        handler.increase_contrast(0, 20);
+        handler.increase_contrast(0, 100);
         handler.write(expand_home_directory("~/me/labs/ikg/lab4/output_data/lab5_file_inc_contr.bmp"));
     });
 
@@ -84,7 +85,7 @@ void lab5() {
 
     actions.emplace_back([source] {
         bmp::BmpHandler handler(source);
-        handler.to_monochrome(160);
+        handler.to_monochrome(190);
         handler.write(expand_home_directory("~/me/labs/ikg/lab4/output_data/lab5_file_monochrome.bmp"));
     });
 
@@ -99,9 +100,25 @@ void lab5() {
     }
 }
 
+void lab7() {
+
+    drawing::Drawer* drawer = new drawing::BmpDrawer();
+
+    curve_algorithms::BresenhamAlgorithmExecutor* executor =
+        new curve_algorithms::LineSegmentBresenhamAlgorithmExecutor(
+            drawer,
+            1 << 9, 1 << 5,
+            1 << 9, 1 << 5,
+            expand_home_directory("~/me/labs/ikg/lab4/output_data/lab7_file_line_segment.bmp")
+        );
+
+    executor->execute();
+}
+
 int main() {
-    lab4();
-    lab5();
+    //lab4();
+    //lab5();
+    lab7();
 
     return 0;
 }

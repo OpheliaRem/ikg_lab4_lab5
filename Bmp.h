@@ -4,6 +4,7 @@
 #include "managing_structs.h"
 #include "BmpImage.h"
 #include "BmpConverter.h"
+#include "ImageType.h"
 #include <vector>
 #include <string>
 #include <fstream>
@@ -54,6 +55,25 @@ namespace bmp {
             }
         }
 
+        BmpImage* define_image_type(const ImageType type) {
+            switch (type) {
+                case INDEXED_1BIT:
+                    return new IndexedBmpImage(file_header, info_header, data, palette);
+                case INDEXED_2BIT:
+                    return new IndexedBmpImage(file_header, info_header, data, palette);
+                case INDEXED_4BIT:
+                    return new IndexedBmpImage(file_header, info_header, data, palette);
+                case INDEXED_8BIT:
+                    return new IndexedBmpImage(file_header, info_header, data, palette);
+                case RGB:
+                    return new RgbBmpImage(file_header, info_header, data);
+                case RGBA:
+                    return new ArgbBmpImage(file_header, info_header, data, color_header);
+                default:
+                    throw std::runtime_error("Unrecognized type of image");
+            }
+        }
+
         void read(const std::string& filename) {
 
             std::ifstream file{filename, std::ios::binary};
@@ -61,8 +81,6 @@ namespace bmp {
             if (!file) {
                 throw std::runtime_error("Could not open file " + filename);
             }
-
-            bmp_image = define_image_type(filename);
 
             bmp_image->read_headers(file);
 
@@ -79,7 +97,13 @@ namespace bmp {
     public:
 
         explicit BmpHandler(const std::string& filename) : bmp_image(nullptr), bmp_converter(nullptr) {
+            bmp_image = define_image_type(filename);
             read(filename);
+        }
+
+        explicit BmpHandler(const ImageType type) : bmp_converter(nullptr) {
+            bmp_image = define_image_type(type);
+            bmp_image->create_blank();
         }
 
         ~BmpHandler() {
@@ -103,31 +127,43 @@ namespace bmp {
             bmp_image->write_data(file);
         }
 
-        void change_pattern(const u_int8_t* bytes, const int index, const size_t quantity) {
-            for (int i = index; i < index + quantity; ++i) {
+        void change_pattern(const std::vector<uint8_t>& bytes, const int index) {
+            for (int i = index; i < index + bytes.size() && i < data.size(); ++i) {
                 data[i] = bytes[i - index];
             }
         }
 
-        uint64_t get_number_of_pixels() const {
+        void draw_pixel_black(const uint32_t index) const {
+            return bmp_image->draw_pixel_black(index);
+        }
+
+        [[nodiscard]] uint64_t get_number_of_pixels() const {
             return info_header.width * info_header.height;
         }
 
-        int get_image_size_in_bytes() const {
+        [[nodiscard]] int get_image_size_in_bytes() const {
             return info_header.width * info_header.height * info_header.bit_count / 8;
+        }
+
+        [[nodiscard]] int32_t get_image_width() const {
+            return info_header.width;
+        }
+
+        [[nodiscard]] int32_t get_image_height() const {
+            return info_header.height;
         }
 
         void make_noise(const int percent_of_picture_to_change) {
             const float part_of_picture_to_change = static_cast<float>(percent_of_picture_to_change) / 100.0f;
             const int size = static_cast<int>(part_of_picture_to_change * static_cast<float>(get_image_size_in_bytes()));
-            const auto bytes = new uint8_t[size];
+            std::vector<uint8_t> bytes;
+            bytes.resize(size);
 
             for (int i = 0; i < size; ++i) {
                 bytes[i] = rand() % 255;
             }
 
-            change_pattern(bytes, 0, size);
-            delete[] bytes;
+            change_pattern(bytes, 0);
         }
 
         void to_8bit(Palette palette) {
@@ -174,7 +210,7 @@ namespace bmp {
             bmp_converter = nullptr;
         }
 
-        std::unordered_map<uint8_t, int> get_color_histogram() const {
+        [[nodiscard]] std::unordered_map<uint8_t, int> get_color_histogram() const {
             return bmp_image->get_color_histogram();
         }
 

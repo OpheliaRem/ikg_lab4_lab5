@@ -93,6 +93,10 @@ namespace  bmp {
         virtual void decrease_contrast(uint8_t q1, uint8_t q2) = 0;
 
         virtual void gamma_correct(int gamma) = 0;
+
+        virtual void create_blank() = 0;
+
+        virtual void draw_pixel_black(const uint32_t index) = 0;
     };
 
     class RgbBmpImage final : public BmpImage {
@@ -186,6 +190,37 @@ namespace  bmp {
 
             data.swap(new_data);
         }
+
+        void create_blank() override {
+            const int32_t width = info_header.width = 1080;
+            const int32_t height = info_header.height = 720;
+            const uint32_t bits = info_header.bit_count = 24;
+
+            const uint32_t row_stride = ((width * bits + 31) / 32) * 4;
+            info_header.size_image = row_stride * height;
+
+            info_header.size = sizeof(BmpInfoHeader);
+
+            data.resize(info_header.size_image);
+
+            for (int y = 0; y < height; ++y) {
+                for (int x = 0; x < width; ++x) {
+                    size_t index = y * row_stride + x * 3;
+                    data[index + 0] = 255; // Blue
+                    data[index + 1] = 255; // Green
+                    data[index + 2] = 255; // Red
+                }
+            }
+
+            file_header.file_size = sizeof(BmpHeader) + sizeof(BmpInfoHeader) + info_header.size_image;
+            file_header.offset = sizeof(BmpHeader) + sizeof(BmpInfoHeader);
+        }
+
+        void draw_pixel_black(const uint32_t index) override {
+            data[index] = 0;
+            data[index + 1] = 0;
+            data[index + 2] = 0;
+        }
     };
 
     class ArgbBmpImage final : public BmpImage {
@@ -240,6 +275,10 @@ namespace  bmp {
         void increase_contrast(const uint8_t q1, const uint8_t q2) override {}
         void decrease_contrast(const uint8_t q1, const uint8_t q2) override {}
         void gamma_correct(const int gamma) override {}
+
+        void create_blank() override {}
+
+        void draw_pixel_black(const uint32_t index) override {}
     };
 
     class IndexedBmpImage final : public BmpImage {
@@ -339,6 +378,10 @@ namespace  bmp {
 
             data.swap(new_data);
         }
+
+        void create_blank() override {}
+
+        void draw_pixel_black(const uint32_t index) override {}
     };
 }
 
