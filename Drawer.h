@@ -4,15 +4,9 @@
 #include <vector>
 #include "Bmp.h"
 #include "ImageType.h"
+#include "Point.h"
 
 namespace drawing {
-
-struct Point {
-    uint32_t x;
-    uint32_t y;
-
-    Point(const uint32_t x, const uint32_t y) : x(x), y(y) {}
-};
 
 class Drawer {
 public:
@@ -30,6 +24,12 @@ public:
         handler = new bmp::BmpHandler(RGB);
     }
 
+    explicit BmpDrawer(bmp::BmpHandler* handler) : handler(handler) {}
+
+    explicit BmpDrawer(const std::string& filename) {
+        handler = new bmp::BmpHandler(filename);
+    }
+
     ~BmpDrawer() override {
         delete handler;
     }
@@ -43,6 +43,8 @@ public:
     void save(const std::string& filename) const override {
         handler->write(filename);
     }
+
+    [[nodiscard]] const bmp::BmpHandler& get_handler() const { return *handler; }
 };
 
 }

@@ -96,7 +96,11 @@ namespace  bmp {
 
         virtual void create_blank() = 0;
 
-        virtual void draw_pixel_black(const uint32_t index) = 0;
+        virtual void draw_pixel_black(uint32_t index) = 0;
+
+        //[[nodiscard]] uint8_t get_byte_value(const uint index) const {
+          //  return data[index];
+        //}
     };
 
     class RgbBmpImage final : public BmpImage {

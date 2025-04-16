@@ -18,12 +18,23 @@ public:
     virtual void execute() = 0;
 };
 
-class LineSegmentBresenhamAlgorithmExecutor final: public BresenhamAlgorithmExecutor {
+
+class BresenhamAlgorithmExecutorWithFile : public BresenhamAlgorithmExecutor {
+protected:
+    std::string filename;
+
+public:
+    BresenhamAlgorithmExecutorWithFile(drawing::Drawer* drawer, std::string filename) : BresenhamAlgorithmExecutor(drawer), filename(std::move(filename)) {}
+
+    virtual void save() = 0;
+};
+
+
+class LineSegmentBresenhamAlgorithmExecutor final: public BresenhamAlgorithmExecutorWithFile {
     uint32_t i0;
     uint32_t i1;
     uint32_t j0;
     uint32_t j1;
-    std::string filename;
 
     void draw_point(const uint32_t x, const uint32_t y) const {
         drawer->draw(drawing::Point(x, y));
@@ -32,11 +43,11 @@ public:
     LineSegmentBresenhamAlgorithmExecutor(
         drawing::Drawer* drawer,
         const uint32_t i0,
-        const uint32_t i1,
         const uint32_t j0,
+        const uint32_t i1,
         const uint32_t j1,
         std::string filename
-    ) : BresenhamAlgorithmExecutor(drawer), i0(i0), i1(i1), j0(j0), j1(j1), filename(std::move(filename)) {}
+    ) : BresenhamAlgorithmExecutorWithFile(drawer, std::move(filename)), i0(i0), i1(i1), j0(j0), j1(j1) {}
 
     void execute() override {
         int c;
@@ -77,11 +88,81 @@ public:
             }
             e += 2 * d_j;
         }
+
+        save();
+    }
+
+    void save() override {
         drawer->save(filename);
     }
 
     static int8_t sign(const int32_t x) {
         return (x > 0) - (x < 0);
+    }
+};
+
+class CircleBresenhamAlgorithmExecutor final: public BresenhamAlgorithmExecutorWithFile {
+    uint32_t cx;
+    uint32_t cy;
+    uint32_t r;
+
+    void draw_point(const uint32_t x, const uint32_t y) const {
+        drawer->draw(drawing::Point(x, y));
+    }
+
+public:
+    CircleBresenhamAlgorithmExecutor(
+        drawing::Drawer* drawer,
+        std::string filename,
+        const uint32_t cx,
+        const uint32_t cy,
+        const uint32_t r
+    ) :
+        BresenhamAlgorithmExecutorWithFile(drawer, std::move(filename)),
+        cx(cx),
+        cy(cy),
+        r(r) {}
+
+    void execute() override {
+        uint x = 0;
+        uint y = r;
+
+        int sd = 2 - 2 * r;
+
+        while (y >= x) {
+            draw_circle_points(cx, cy, x, y);
+
+            int err = 2 * (sd + y) - 1;
+
+            if (sd < 0 && err <= 0) {
+                sd += 2 * ++x + 1;
+                continue;
+            }
+
+            if (sd > 0 && err >= 0) {
+                sd -= 2 * --y + 1;
+                continue;
+            }
+
+            sd += 2 * (++x - --y);
+        }
+
+        drawer->save(filename);
+    }
+
+    void draw_circle_points(const int cx, const int cy, const int x, const int y) const {
+        draw_point(cx + x, cy + y);
+        draw_point(cx - x, cy + y);
+        draw_point(cx + x, cy - y);
+        draw_point(cx - x, cy - y);
+        draw_point(cx + y, cy + x);
+        draw_point(cx - y, cy + x);
+        draw_point(cx + y, cy - x);
+        draw_point(cx - y, cy - x);
+    }
+
+    void save() override {
+        drawer->save(filename);
     }
 };
 

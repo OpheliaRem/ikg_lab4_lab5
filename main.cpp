@@ -1,10 +1,11 @@
 #include "Bmp.h"
+#include "BmpImage.h"
+#include "RasterDrawer.h"
 #include "managing_structs.h"
 #include "MapToCsvFileHandler.h"
 #include <filesystem>
 #include <vector>
 #include <functional>
-#include "BresenhamAlgorithmExecutor.h"
 
 std::string expand_home_directory(const std::string& path) {
     if (path[0] == '~') {
@@ -102,22 +103,29 @@ void lab5() {
 
 void lab7() {
 
-    drawing::Drawer* drawer = new drawing::BmpDrawer();
+    RasterDrawer::draw_line(
+        expand_home_directory("~/me/labs/ikg/lab4/output_data/lab7_file_line_segment.bmp"),
+        1 << 9, 1 << 9,
+        1 << 5, 1 << 5
+    );
 
-    curve_algorithms::BresenhamAlgorithmExecutor* executor =
-        new curve_algorithms::LineSegmentBresenhamAlgorithmExecutor(
-            drawer,
-            1 << 9, 1 << 5,
-            1 << 9, 1 << 5,
-            expand_home_directory("~/me/labs/ikg/lab4/output_data/lab7_file_line_segment.bmp")
-        );
+    RasterDrawer::draw_circle(
+        expand_home_directory("~/me/labs/ikg/lab4/output_data/lab7_file_circle.bmp"),
+        720 / 2,
+        1080 / 2,
+        720 / 2 - 20
+    );
 
-    executor->execute();
+    RasterDrawer::fill(expand_home_directory(
+        "~/me/labs/ikg/lab4/output_data/lab7_file_circle.bmp"),
+        720 / 2,
+        1080 / 2
+    );
 }
 
 int main() {
-    //lab4();
-    //lab5();
+    lab4();
+    lab5();
     lab7();
 
     return 0;

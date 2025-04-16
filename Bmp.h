@@ -5,6 +5,7 @@
 #include "BmpImage.h"
 #include "BmpConverter.h"
 #include "ImageType.h"
+#include "Point.h"
 #include <vector>
 #include <string>
 #include <fstream>
@@ -151,6 +152,24 @@ namespace bmp {
 
         [[nodiscard]] int32_t get_image_height() const {
             return info_header.height;
+        }
+
+        [[nodiscard]] uint8_t get_byte_value(const uint index) const {
+            return data[index];
+        }
+
+        [[nodiscard]] std::vector<uint8_t> get_color_value(const drawing::Point& point) const {
+            if (info_header.bit_count < 8) {
+                throw std::runtime_error("Not enough bits for color value");
+            }
+            const uint number_of_bytes = info_header.bit_count / 8;
+            const uint index = point.x * number_of_bytes * info_header.width + point.y * number_of_bytes;
+
+            std::vector<uint8_t> color_values;
+            for (int i = 0; i < number_of_bytes && i < data.size(); ++i) {
+                color_values.push_back(data[index + i]);
+            }
+            return color_values;
         }
 
         void make_noise(const int percent_of_picture_to_change) {
